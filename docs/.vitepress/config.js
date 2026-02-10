@@ -22,18 +22,18 @@ export default {
             {
                 text: "Päev 2 – 100% praktiline",
                 items: [
-                    { text: "Praktiline töötuba", link: "/day-2/practical-workshop" }
+                    { text: "Praktiline töötuba", link: "/day-2/practical-workshop" },
+                    { text: "Praktiline töö", link: "/day-2/practical-workshop" },
                 ]
             }
         ],
 
         socialLinks: [
-            // soovi korral lisa repo link hiljem:
-            // { icon: "github", link: "https://github.com/..." }
+            { icon: "github", link: "https://github.com/vikatgen/testing-handbook/tree/master" }
         ],
 
         footer: {
-            message: "Õppematerjal sisekasutuseks (kool).",
+            message: "Õppematerjal sisekasutuseks (Kuressaare Ametikool).",
             copyright: "©"
         }
     }
