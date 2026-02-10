@@ -1,7 +1,7 @@
 export default {
     base: "/testing-handbook/",
     lang: "et-EE",
-    title: "Node.js Testimise Käsiraamat",
+    title: "TESTIMINE (NODEJS)",
     description: "2-päevane moodul: testimise alused, TDD, mockimine, API testimine, Docker, Prisma",
 
     themeConfig: {
