@@ -16,8 +16,8 @@ Päev 2 koosneb kahest osast:
 Õpetaja annab teile scaffold projekti lingi. Kloonige see:
 
 ```bash
-git clone <projekti-url>
-cd workshop-booking-api
+git clone https://github.com/vikatgen/test-handbook-nodejs-express-application.git
+cd test-handbook-nodejs-express-application
 npm install
 ```
 
