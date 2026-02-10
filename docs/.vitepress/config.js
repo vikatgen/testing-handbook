@@ -16,13 +16,13 @@ export default {
                 text: "Päev 1 – Teooria + Workshop",
                 items: [
                     { text: "Sissejuhatus testimisse", link: "/day-1/introduction" },
-                    { text: "Mockimine ja Workshop", link: "/day-1/advanced-topics" }
+                    { text: "Mockimine, arhitektuur ja Jest workshop", link: "/day-1/advanced-topics" }
                 ]
             },
             {
                 text: "Päev 2 – 100% praktiline",
                 items: [
-                    { text: "Teooria ja kontseptsioonid", link: "/day-2/practical-api-testing" },
+                    { text: "Scaffold projekti ülevaade", link: "/day-2/practical-api-testing" },
                     { text: "Ülesanded", link: "/day-2/practical-workshop" },
                 ]
             }

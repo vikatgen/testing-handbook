@@ -340,315 +340,305 @@ See on:
 
 Professionaalne arendaja mõtleb testitavusele enne implementatsiooni.
 
-# 18. Praktiline workshop – Kihiline arhitektuur ja mockimine
+# 18. Praktiline workshop – Jest ja puhtad funktsioonid
 
 ## Eesmärk
 
-Rakendada:
-
-- Dependency Injection
-- Service kihi unit testimist
-- Repository mockimist
-- Isolatsiooni põhimõtteid
-
----
-
-# 18.1 Arhitektuuri struktuur
-
-Me loome lihtsustatud broneerimissüsteemi.
-
-Struktuur:
-
-```
-src/
-  controllers/
-    bookingController.js
-  services/
-    bookingService.js
-  repositories/
-    bookingRepository.js
-```
-
----
-
-# 18.2 Repository (infrastruktuurikiht)
-
-```js
-// repositories/bookingRepository.js
-
-class BookingRepository {
-  async countBookings(workshopId) {
-    // siin oleks päris andmebaasi päring
-    throw new Error("Not implemented");
-  }
-
-  async createBooking(data) {
-    throw new Error("Not implemented");
-  }
-}
-
-module.exports = BookingRepository;
-```
-
----
-
-# 18.3 Service (äriloogika kiht)
-
-```js
-// services/bookingService.js
-
-class BookingService {
-  constructor(bookingRepository) {
-    this.bookingRepository = bookingRepository;
-  }
-
-  async createBooking(workshopId, capacity) {
-    const currentBookings =
-      await this.bookingRepository.countBookings(workshopId);
-
-    if (currentBookings >= capacity) {
-      throw new Error("Workshop is full");
-    }
-
-    return this.bookingRepository.createBooking({ workshopId });
-  }
-}
-
-module.exports = BookingService;
-```
-
-Oluline:
-
-Service EI tea midagi andmebaasist.  
-Service teab ainult repository liidest.
-
-See teeb selle testitavaks.
-
----
-
-# 18.4 Unit test – mock repository
-
-```js
-// tests/bookingService.test.js
-
-const BookingService = require("../services/bookingService");
-
-describe("BookingService", () => {
-  let mockRepository;
-  let bookingService;
-
-  beforeEach(() => {
-    mockRepository = {
-      countBookings: jest.fn(),
-      createBooking: jest.fn()
-    };
-
-    bookingService = new BookingService(mockRepository);
-  });
-
-  test("viskab vea kui workshop on täis", async () => {
-    mockRepository.countBookings.mockResolvedValue(5);
-
-    await expect(
-      bookingService.createBooking(1, 5)
-    ).rejects.toThrow("Workshop is full");
-
-    expect(mockRepository.createBooking).not.toHaveBeenCalled();
-  });
-
-  test("loob broneeringu kui kohti on saadaval", async () => {
-    mockRepository.countBookings.mockResolvedValue(2);
-    mockRepository.createBooking.mockResolvedValue({
-      id: 1,
-      workshopId: 1
-    });
-
-    const result = await bookingService.createBooking(1, 5);
-
-    expect(result).toEqual({
-      id: 1,
-      workshopId: 1
-    });
-
-    expect(mockRepository.createBooking).toHaveBeenCalledWith({
-      workshopId: 1
-    });
-  });
-});
-```
-
----
-
-# 18.5 Mida see test tegelikult teeb?
-
-- Me ei kasuta päris andmebaasi
-- Me kontrollime ainult äriloogikat
-- Me valideerime, et repository meetodeid kutsutakse õigesti
-- Me testime käitumist, mitte implementatsiooni detaile
-
-See on päris unit test.
-
----
-
-# 18.6 Aruteluküsimused
-
-1. Mis juhtuks, kui me kasutaks päris andmebaasi?
-2. Kas see test kontrollib liiga palju?
-3. Kas mockimine muudab testid hapraks?
-4. Kus peaks toimuma valideerimine – controlleris või service’is?
-
----
-
-# 18.7 Edasijõudnutele – Integration test (mõtteharjutus)
-
-Kuidas muutuks test, kui me tahaks testida:
-
-- Express route
-- Päris andmebaasi
-- Repository implementatsiooni
-
-Kas me kasutaks mocke?
-
-Ei.
-
-Siis muutub test integration testiks.
-
----
-
-# 18.8 Refleksioon
-
-See harjutus näitab:
-
-- Testitav arhitektuur nõuab teadlikku disaini
-- Dependency Injection muudab süsteemi paindlikuks
-- Unit test ei tohiks sõltuda infrastruktuurist
-- Mockimine on tööriist, mitte eesmärk
-
-Kui koodi on raske testida,
-siis on arhitektuur tõenäoliselt vale.
-
-# 19. Mini Challenge – Test Driven Booking Logic
-
-## Eesmärk
-
-Rakendada:
-
-- TDD tsüklit (Red → Green → Refactor)
-- Dependency Injection'i
-- Mock repository kasutamist
-- Äriloogika testimist isolatsioonis
-
-Töö toimub paarides:
-- 1 vanem + 1 noorem
-- Rollivahetus iga ~30–40 minuti järel
-
----
-
-# 19.1 Ülesanne – Laienda BookingService loogikat
-
-::: tip Märkus
-Meie `createBooking` meetod on kasvanud algsest lihtsast `canBook(capacity, currentBookings)` funktsioonist täisväärtuslikuks service meetodiks, mis saab nüüd ka `userId` parameetri. See on loomulik — äriloogika kasvab koos nõuetega.
+Nüüd rakendame teooria praktikas! Selles workshopis:
+
+- Seadistad Jest testrunner'i nullist
+- Kirjutad puhtaid funktsioone (pure functions)
+- Rakendad TDD tsüklit: Red → Green → Refactor
+- Koged, kuidas testid juhivad koodi kirjutamist
+
+::: tip Miks puhtad funktsioonid?
+Puhtad funktsioonid on kõige lihtsam viis testimist õppida — neil pole sõltuvusi, nad tagastavad alati sama tulemuse samade sisenditega. Express ja andmebaas tulevad Päeval 2.
 :::
 
-Antud on BookingService, mis kontrollib ainult capacity't.
-
-Teie ülesanne on lisada järgmised ärireeglid:
-
-1. Üks kasutaja ei tohi sama workshop'i kaks korda broneerida
-2. Workshop peab eksisteerima
-3. Capacity peab olema positiivne arv
-
 ---
 
-# 19.2 Repository liides (mockimiseks)
+## 18.1 Projekti seadistamine
 
-Lisage mock repository'sse järgmised meetodid:
+### Samm 1: Loo uus projekt
 
-- countBookings(workshopId)
-- createBooking(data)
-- userAlreadyBooked(userId, workshopId)
-- workshopExists(workshopId)
+```bash
+mkdir jest-workshop
+cd jest-workshop
+npm init -y
+```
 
----
+### Samm 2: Paigalda Jest
 
-# 19.3 TDD reegel
+```bash
+npm install --save-dev jest
+```
 
-Ärge kirjutage uut äriloogikat enne, kui:
+### Samm 3: Seadista package.json
 
-- test on kirjutatud
-- test ebaõnnestub
+Ava `package.json` ja muuda `scripts` osa:
 
----
+```json
+{
+  "scripts": {
+    "test": "jest"
+  }
+}
+```
 
-# 19.4 Baastase (kõik paarid)
+### Samm 4: Loo failide struktuur
 
-Kirjutage unit test, mis kontrollib:
+```
+jest-workshop/
+  src/
+    booking.js
+    validation.js
+    math.js
+  tests/
+    booking.test.js
+    validation.test.js
+    math.test.js
+  package.json
+```
 
-- Kui workshop ei eksisteeri → visatakse Error("Workshop not found")
-- Kui kasutaja on juba broneerinud → visatakse Error("Already booked")
+Loo kaustad:
 
-Näide testist:
+```bash
+mkdir src tests
+```
+
+### Samm 5: Kontrolli, et Jest töötab
+
+Loo fail `tests/setup.test.js`:
 
 ```js
-test("ei luba topeltbroneeringut", async () => {
-  mockRepository.workshopExists.mockResolvedValue(true);
-  mockRepository.userAlreadyBooked.mockResolvedValue(true);
-
-  await expect(
-    bookingService.createBooking(1, 10, 5)
-  ).rejects.toThrow("Already booked");
+test("Jest töötab", () => {
+  expect(1 + 1).toBe(2);
 });
+```
+
+Käivita:
+
+```bash
+npm test
+```
+
+Peaksid nägema rohelist testi. Kui jah — kõik on valmis!
+
+Kustuta `tests/setup.test.js` enne järgmise sammuga jätkamist.
+
+---
+
+## 18.2 Harjutus 1: canBook() – TDD tsükkel
+
+Siin harjutame TDD'd samm-sammult.
+
+### Red: kirjuta ebaõnnestuv test
+
+Loo fail `tests/booking.test.js`:
+
+```js
+const { canBook } = require("../src/booking");
+
+describe("canBook", () => {
+  test("tagastab true kui kohti on saadaval", () => {
+    expect(canBook(10, 5)).toBe(true);
+  });
+
+  test("tagastab false kui workshop on täis", () => {
+    expect(canBook(10, 10)).toBe(false);
+  });
+
+  test("tagastab false kui kohti on üle", () => {
+    expect(canBook(10, 15)).toBe(false);
+  });
+});
+```
+
+Käivita `npm test` — testid **peavad ebaõnnestuma** (Red).
+
+### Green: kirjuta minimaalne kood
+
+Loo fail `src/booking.js`:
+
+```js
+function canBook(capacity, currentBookings) {
+  return currentBookings < capacity;
+}
+
+module.exports = { canBook };
+```
+
+Käivita `npm test` — testid **peavad läbi minema** (Green).
+
+### Refactor: kas koodi saab paremaks teha?
+
+Siin on kood juba lihtne, seega refaktoreerimine pole vajalik. Aga TDD tsükkel näeb ette, et selles faasis vaatad koodi üle.
+
+---
+
+## 18.3 Harjutus 2: validateEmail()
+
+### Red: kirjuta testid kõigepealt
+
+Loo fail `tests/validation.test.js`:
+
+```js
+const { validateEmail } = require("../src/validation");
+
+describe("validateEmail", () => {
+  test("kehtiv email tagastab true", () => {
+    expect(validateEmail("test@example.com")).toBe(true);
+  });
+
+  test("email ilma @-märgita tagastab false", () => {
+    expect(validateEmail("testexample.com")).toBe(false);
+  });
+
+  test("tühi string tagastab false", () => {
+    expect(validateEmail("")).toBe(false);
+  });
+
+  test("null tagastab false", () => {
+    expect(validateEmail(null)).toBe(false);
+  });
+});
+```
+
+Käivita `npm test` — Red.
+
+### Green: implementeeri
+
+Loo fail `src/validation.js`:
+
+```js
+function validateEmail(email) {
+  if (!email) return false;
+  return email.includes("@");
+}
+
+module.exports = { validateEmail };
+```
+
+Käivita `npm test` — Green.
+
+### Refactor: lisa edge case'id
+
+Nüüd mõtle: kas on veel olukordi, mida peaks testima?
+
+Lisa testid ise:
+- Mis juhtub emailiga `"@"`?
+- Mis juhtub emailiga `"test@"`?
+
+Vajadusel paranda implementatsiooni.
+
+---
+
+## 18.4 Harjutus 3: divide() – veakäsitlus
+
+### Red: testid
+
+Loo fail `tests/math.test.js`:
+
+```js
+const { divide } = require("../src/math");
+
+describe("divide", () => {
+  test("jagab kaks arvu õigesti", () => {
+    expect(divide(10, 2)).toBe(5);
+  });
+
+  test("tagastab ujukomaarvu", () => {
+    expect(divide(7, 2)).toBe(3.5);
+  });
+
+  test("viskab vea nulliga jagamisel", () => {
+    expect(() => divide(10, 0)).toThrow("Cannot divide by zero");
+  });
+});
+```
+
+### Green: implementeeri
+
+Loo fail `src/math.js`:
+
+```js
+function divide(a, b) {
+  if (b === 0) {
+    throw new Error("Cannot divide by zero");
+  }
+  return a / b;
+}
+
+module.exports = { divide };
+```
+
+::: tip Uus pattern: expect(() => ...).toThrow()
+Kui tahad testida, et funktsioon viskab vea, pead selle mähkima `() =>` sisse. Muidu Jest ei suuda viga püüda.
+:::
+
+---
+
+## 18.5 Iseseisvad ülesanded
+
+Nüüd on sinu kord! Rakenda TDD tsüklit ise — **kirjuta test enne koodi**.
+
+### Ülesanne A: Lisa canBook() reeglid
+
+Lisa `src/booking.js` faili uus funktsioon ja testi seda:
+
+```js
+// Funktsioon: canUserBook(capacity, currentBookings, userAlreadyBooked)
+// Reeglid:
+// - Kui kohti pole → tagasta { allowed: false, reason: "Workshop is full" }
+// - Kui kasutaja on juba broneerinud → tagasta { allowed: false, reason: "Already booked" }
+// - Muidu → tagasta { allowed: true }
+```
+
+**TDD:** kirjuta kõigepealt testid `tests/booking.test.js` faili, siis implementeeri.
+
+### Ülesanne B: calculatePrice()
+
+Kirjuta funktsioon ja testid:
+
+```js
+// Funktsioon: calculatePrice(basePrice, quantity, discountPercent)
+// Reeglid:
+// - Tavaline hind: basePrice * quantity
+// - Allahindlus: lahuta discountPercent protsentides
+// - Kui quantity < 1 → throw Error
+// - Kui discountPercent > 100 või < 0 → throw Error
+//
+// Näide: calculatePrice(100, 3, 10) → 270 (300 - 10%)
+```
+
+### Ülesanne C (edasijõudnutele): parseBookingInput()
+
+```js
+// Funktsioon: parseBookingInput(input)
+// Sisend on objekt: { workshopId, userId, capacity }
+// Reeglid:
+// - workshopId peab olema positiivne täisarv
+// - userId peab olema positiivne täisarv
+// - capacity peab olema > 0
+// - Kui validatsioon ebaõnnestub → throw Error kirjeldava sõnumiga
+// - Kui kõik on korras → tagasta { workshopId, userId, capacity }
+//
+// Testi edge case'id: negatiivsed arvud, stringid, undefined, null
 ```
 
 ---
 
-# 19.5 Edasijõudnud (vanemad)
-
-Lisage:
-
-- Custom error class (nt BookingError)
-- Erinevad error tüübid (NOT_FOUND, FULL, DUPLICATE)
-- Testige, et õige error type tagastatakse
-
-Näide:
-
-```js
-await expect(
-  bookingService.createBooking(1, 10, 5)
-).rejects.toMatchObject({
-  type: "DUPLICATE"
-});
-```
-
----
-
-# 19.6 Stretch Goal (ainult kui aeg lubab)
-
-Refaktoreerige BookingService nii, et:
-
-- Capacity kontroll ei sõltu parameetrist
-- Workshop andmed tulevad repository kaudu
-- Service ei tea midagi controllerist ega Expressist
-
----
-
-# 19.7 Hindamiskriteeriumid
-
-Hea lahendus:
-
-- Kasutab dependency injection'it
-- Ei kasuta päris andmebaasi
-- Omab vähemalt 5 selget unit testi
-- Testid on loetavad ja kirjeldavad käitumist
-
----
-
-# 19.8 Refleksioon
+## 18.6 Refleksioon
 
 Arutage paaris:
 
-- Kas testide kirjutamine enne koodi muutis mõtlemist?
-- Kas mockimine tundus loomulik või kunstlik?
-- Kus tundus arhitektuur keerulisem kui vaja?
+- Kas testide kirjutamine **enne** koodi muutis sinu mõtlemist?
+- Kas TDD tsükkel (Red → Green → Refactor) tundus loomulik?
+- Milliseid vigu oleksid teinud ilma testideta?
+- Kuidas aitavad puhtad funktsioonid testitavusele kaasa?
+
+::: tip Mida homme teeme?
+Päeval 2 rakendame neid samu põhimõtteid päris Express API projektis — testime service kihti mockidega ja API endpointe Supertestiga. Seal tuleb kasuks ka kihilise arhitektuuri teooria, mida täna lugesid (sektsioonid 13–17).
+:::
 
 
