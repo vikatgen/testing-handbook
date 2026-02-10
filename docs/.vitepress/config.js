@@ -8,7 +8,7 @@ export default {
         nav: [
             { text: "Avaleht", link: "/" },
             { text: "Päev 1", link: "/day-1/introduction" },
-            { text: "Päev 2", link: "/day-2/practical-workshop" }
+            { text: "Päev 2", link: "/day-2/practical-api-testing" }
         ],
 
         sidebar: [
@@ -16,14 +16,14 @@ export default {
                 text: "Päev 1 – Teooria + Workshop",
                 items: [
                     { text: "Sissejuhatus testimisse", link: "/day-1/introduction" },
-                    { text: "Edasijõudnud teemad", link: "/day-1/advanced-topics" }
+                    { text: "Mockimine ja Workshop", link: "/day-1/advanced-topics" }
                 ]
             },
             {
                 text: "Päev 2 – 100% praktiline",
                 items: [
-                    { text: "Praktiline töötuba", link: "/day-2/practical-workshop" },
-                    { text: "Praktiline töö", link: "/day-2/practical-workshop" },
+                    { text: "Teooria ja kontseptsioonid", link: "/day-2/practical-api-testing" },
+                    { text: "Ülesanded", link: "/day-2/practical-workshop" },
                 ]
             }
         ],

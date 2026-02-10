@@ -15,9 +15,13 @@ Selle päeva lõpuks peaks õppija:
 
 # 1. Tarkvara testimise olemus
 
+Kujuta ette: oled lõpetanud broneerimissüsteemi arenduse ja teed deploy. Kõik toimib. Nädal hiljem lisad uue feature'i ja järsku ei saa kasutajad enam broneerida — vana loogika läks katki. Klient on pahane, sa otsid bugi mitu tundi.
+
+**Testid oleksid selle ära hoidnud.** Automaatne test oleks kohe öelnud, et broneerimine ei tööta enam.
+
 Tarkvara testimine on süsteemne protsess, mille eesmärk on hinnata tarkvara kvaliteeti ja tuvastada kõrvalekaldeid ootuspärasest käitumisest.
 
-Testimine ei ole pelgalt vigade leidmine.  
+Testimine ei ole pelgalt vigade leidmine.
 Testimine on mehhanism, mis võimaldab:
 
 - valideerida äriloogikat
@@ -100,7 +104,7 @@ Integration test võib kasutada test-andmebaasi ja reaalset HTTP päringut (Supe
 
 ---
 
-## 2.3 End-to-End test (E2E / B2B)
+## 2.3 End-to-End test (E2E)
 
 End-to-End test simuleerib kasutaja tegelikku käitumist ja testib kogu süsteemi voogu.
 
@@ -125,9 +129,15 @@ Need testid on aeglasemad ja kallimad, kuid annavad kõrge kindlustunde.
 
 Testimise püramiid kirjeldab testide optimaalset jaotust:
 
-- Palju unit teste
-- Mõõdukas arv integration teste
-- Vähe end-to-end teste
+```
+        /‾‾‾‾‾‾‾\
+       /  E2E    \          ← vähe, aeglased, kallid
+      /‾‾‾‾‾‾‾‾‾‾‾\
+     / Integration  \       ← mõõdukas arv
+    /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
+   /   Unit Tests      \    ← palju, kiired, odavad
+  /‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾\
+```
 
 Miks?
 

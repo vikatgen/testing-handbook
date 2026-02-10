@@ -59,7 +59,7 @@ docker-compose.yml
 .env.test
 ```
 
-Te ei alusta nullist.  
+Te ei alusta nullist.
 Teie ülesanne on süsteemi laiendada ja testida.
 
 ---
@@ -89,7 +89,7 @@ Miks eraldi test-andmebaas?
 
 Integration test:
 
-- Käivitab päris Express app’i
+- Käivitab päris Express app'i
 - Ühendub test DB-ga
 - Teeb päris päringuid
 
@@ -100,7 +100,32 @@ Oluline:
 
 ---
 
-# 5. Swagger – API leping
+# 5. Prisma migratsioonid
+
+Arenduse andmebaas:
+
+```bash
+npx prisma migrate dev
+```
+
+Test-andmebaas:
+
+```bash
+npm run migrate:test
+```
+
+Miks migratsioonid on olulised?
+
+- Tagavad skeemi versioonihalduse
+- Võimaldavad keskkondi sünkroonida
+- On osa professionaalsest arendusprotsessist
+
+Allikas:
+https://www.prisma.io/docs/concepts/components/prisma-migrate
+
+---
+
+# 6. Swagger – API leping
 
 Swagger (OpenAPI) kirjeldab:
 
@@ -121,53 +146,50 @@ Kui API käitumine ei vasta Swaggerile, siis API on vale.
 
 ---
 
-# 6. Tänased ülesanded
+# 7. Integration test – mis see tegelikult tähendab?
 
-Te töötate paarides.
+Integration test:
 
-Rollivahetus iga ~40 min.
+- Käivitab Express rakenduse
+- Teeb päris HTTP päringu
+- Kasutab päris andmebaasi
+- Kontrollib süsteemi koostööd
 
----
+Näide:
 
-# 6.1 Baastase (kõik paarid)
+```js
+const res = await request(app)
+  .post("/users")
+  .send({ name: "Ada", email: "ada@test.com" });
 
-1. Kirjutage integration test:
-    - GET /health
-    - Kontrollige status 200
-
-2. Kirjutage integration test:
-    - POST /users (happy path)
-    - POST /users (vale sisend → 400)
-
-3. Lisage andmebaasi cleanup beforeEach()
-
----
-
-# 6.2 Kesktase
-
-1. Kirjutage integration test:
-    - POST /workshops
-    - capacity peab olema > 0
-
-2. Kirjutage integration test:
-    - POST /bookings (happy path)
-
-3. Kirjutage test:
-    - POST /bookings kui workshop on täis → 409
+expect(res.statusCode).toBe(201);
+```
 
 ---
 
-# 6.3 Edasijõudnud (vanemad)
+# 8. Test-andmebaasi puhastamine
 
-1. Lisage transaction booking loomisel
-2. Kontrollige concurrency edge-case:
-    - Kaks broneeringut samaaegselt
-3. Testige, et API vastab Swaggeris defineeritud vastusele
-4. Lisage test, mis kontrollib error response struktuuri
+Testides kasutatakse:
+
+```js
+beforeEach(async () => {
+  await resetDb();
+});
+```
+
+Miks see on oluline?
+
+- Testid peavad olema iseseisvad
+- Testid ei tohi sõltuda järjekorrast
+
+See on testide isolatsiooni põhimõte.
+
+Allikas:
+https://martinfowler.com/bliki/TestIsolation.html
 
 ---
 
-# 7. Testimisstrateegia arutelu
+# 9. Testimisstrateegia arutelu
 
 Küsimused:
 
@@ -178,16 +200,7 @@ Küsimused:
 
 ---
 
-# 8. Päeva lõpu refleksioon
-
-- Kas integration test oli keerulisem kui unit test?
-- Kas Docker lisas keerukust või selgust?
-- Kas Swagger aitas mõista API struktuuri?
-- Kui palju testid suurendasid kindlustunnet?
-
----
-
-# 9. Lisamaterjalid
+# 10. Lisamaterjalid
 
 Docker:
 https://docs.docker.com/
@@ -203,3 +216,6 @@ https://github.com/ladjs/supertest
 
 Prisma:
 https://www.prisma.io/docs
+
+Testimise strateegia:
+https://martinfowler.com/articles/practical-test-pyramid.html

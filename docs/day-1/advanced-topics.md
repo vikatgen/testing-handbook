@@ -51,30 +51,37 @@ Unit test peaks testima ainult äriloogikat, mitte infrastruktuuri.
 
 ## 11.3 Mockimine Node.js kontekstis (Jest)
 
-Näide:
+`jest.fn()` loob mock-funktsiooni, millele saab ette anda soovitud tagastusväärtuse:
 
 ```js
-const bookingRepository = {
-  countBookings: jest.fn()
-};
+const mockCountBookings = jest.fn();
 
-bookingRepository.countBookings.mockReturnValue(5);
+// Ütleme mockile: kui sind kutsutakse, tagasta 5
+mockCountBookings.mockReturnValue(5);
+
+// Nüüd saame kontrollida loogikat ilma andmebaasita
+const count = mockCountBookings();  // tagastab 5
 ```
 
-Test:
+Praktiline näide — loome mock repository objekti:
 
 ```js
 test("ei luba broneerida kui kohad on täis", () => {
-  bookingRepository.countBookings.mockReturnValue(5);
+  const mockRepository = {
+    countBookings: jest.fn().mockReturnValue(5),
+    createBooking: jest.fn()
+  };
 
-  const result = canBook(5, bookingRepository.countBookings());
+  // Anname mock repository service'ile (dependency injection)
+  const service = new BookingService(mockRepository);
 
-  expect(result).toBe(false);
+  expect(() => service.createBooking(1, 5)).toThrow("Workshop is full");
+  expect(mockRepository.createBooking).not.toHaveBeenCalled();
 });
 ```
 
-Siin ei kasutata päris andmebaasi.  
-Me kontrollime ainult loogikat.
+Siin ei kasutata päris andmebaasi.
+Me kontrollime ainult äriloogikat, andes service'ile "võlts" repository.
 
 ### Allikas
 - Jest Mock Functions  
@@ -119,26 +126,128 @@ See on dependency injection.
 
 # 13. Testitav arhitektuur (Testable Design)
 
-Hea arhitektuur toetab testimist.
+## 13.0 Probleem: kõik ühes route'is
 
-Testitava süsteemi omadused:
+Tõenäoliselt oled seni kirjutanud Express koodi umbes nii:
 
-- Selge eraldus:
-    - Controller
-    - Service
-    - Repository
-- Äriloogika ei sõltu Expressist
-- Äriloogika ei sõltu andmebaasist
+```js
+// routes/bookings.js
+router.post("/bookings", async (req, res) => {
+  const { workshopId, userId } = req.body;
 
-Näide kihilisest arhitektuurist:
+  // Kontrollime, kas workshop eksisteerib
+  const workshop = await prisma.workshop.findUnique({
+    where: { id: workshopId }
+  });
+  if (!workshop) {
+    return res.status(404).json({ error: "Workshop not found" });
+  }
+
+  // Kontrollime, kas kohti on
+  const count = await prisma.booking.count({
+    where: { workshopId }
+  });
+  if (count >= workshop.capacity) {
+    return res.status(409).json({ error: "Workshop is full" });
+  }
+
+  // Loome broneeringu
+  const booking = await prisma.booking.create({
+    data: { workshopId, userId }
+  });
+
+  res.status(201).json(booking);
+});
+```
+
+See töötab. Aga kuidas seda testida?
+
+**Probleem:** äriloogika (capacity kontroll, topeltbroneeringu kontroll) on segunenud Expressi route'iga ja andmebaasi päringutega. Et testida loogikat, peaksid käivitama terve Express serveri ja päris andmebaasi.
+
+---
+
+## 13.1 Lahendus: kihiline arhitektuur
+
+Mõte on lihtne: **eralda vastutused erinevatesse kihtidesse.**
 
 ```
 Route -> Controller -> Service -> Repository -> Database
 ```
 
-Unit test peaks testima Service kihti.
+Iga kiht teeb ühte asja:
 
-Integration test võib testida Controller + Service + Database.
+| Kiht | Vastutus | Näide |
+|------|----------|-------|
+| **Route** | URL-i ja HTTP meetodi sidumine | `router.post("/bookings", ...)` |
+| **Controller** | Req/res käsitlemine, validatsioon | Loeb body't, saadab vastuse |
+| **Service** | Äriloogika | "Kas workshop on täis?" |
+| **Repository** | Andmebaasi päringud | `prisma.booking.count(...)` |
+
+---
+
+## 13.2 Samm-sammult refaktoreerimine
+
+### Samm 1: Eralda andmebaasi päringud → Repository
+
+```js
+// repositories/bookingRepository.js
+class BookingRepository {
+  async countBookings(workshopId) {
+    return prisma.booking.count({ where: { workshopId } });
+  }
+
+  async createBooking(data) {
+    return prisma.booking.create({ data });
+  }
+}
+```
+
+### Samm 2: Eralda äriloogika → Service
+
+```js
+// services/bookingService.js
+class BookingService {
+  constructor(bookingRepository) {
+    this.bookingRepository = bookingRepository;
+  }
+
+  async createBooking(workshopId, capacity) {
+    const currentBookings =
+      await this.bookingRepository.countBookings(workshopId);
+
+    if (currentBookings >= capacity) {
+      throw new Error("Workshop is full");
+    }
+
+    return this.bookingRepository.createBooking({ workshopId });
+  }
+}
+```
+
+### Samm 3: Route jääb "õhukeseks"
+
+```js
+// routes/bookings.js
+router.post("/bookings", async (req, res) => {
+  try {
+    const result = await bookingService.createBooking(
+      req.body.workshopId,
+      req.body.capacity
+    );
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(409).json({ error: err.message });
+  }
+});
+```
+
+### Mis me saavutasime?
+
+- **Service** ei tea midagi Expressist (pole `req`, `res`)
+- **Service** ei tea midagi andmebaasist (kasutab ainult repository liidest)
+- **Repository** on vahetatav (päris DB või mock)
+
+See tähendab, et **Service kihti saab testida unit testiga ilma andmebaasita.**
 
 ---
 
@@ -436,6 +545,10 @@ Töö toimub paarides:
 ---
 
 # 19.1 Ülesanne – Laienda BookingService loogikat
+
+::: tip Märkus
+Meie `createBooking` meetod on kasvanud algsest lihtsast `canBook(capacity, currentBookings)` funktsioonist täisväärtuslikuks service meetodiks, mis saab nüüd ka `userId` parameetri. See on loomulik — äriloogika kasvab koos nõuetega.
+:::
 
 Antud on BookingService, mis kontrollib ainult capacity't.
 
